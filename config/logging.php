@@ -82,6 +82,21 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'job-runner' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/job-runner-log.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        'joblog' => [
+            'driver' => 'custom',
+            'via' => App\Logging\JobLogger::class,
+            'path' => storage_path('logs/job-runner-log.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+        ],
+
         'papertrail' => [
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
