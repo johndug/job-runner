@@ -23,12 +23,24 @@ class LogController extends Controller
             for ($i = 1; $i < count($parts); $i += 2) {
                 $date = $parts[$i];
                 $message = trim($parts[$i + 1]);
-                if (!empty($message)) {
-                    $logs[] = [
-                        'date' => $date,
-                        'message' => $message
-                    ];
+
+                $type = 'info';
+
+                if (str_contains($message, '[Error]')) {
+                    $type = 'error';
+                } elseif (str_contains($message, '[Success]')) {
+                    $type = 'success';
+                    $command = trim(last(explode('[Command]', $message)));
+                    // Remove anything after '[' if it exists
+                    $command = preg_replace('/\[.*$/', '', $command);
                 }
+
+                $logs[] = [
+                    'date' => $date,
+                    'type' => $type,
+                    'message' => $message,
+                    'command' => $command ?? '',
+                ];
             }
 
             // Reverse to show newest first
@@ -36,55 +48,6 @@ class LogController extends Controller
         }
 
         return view('logs.index', compact('logs'));
-    }
-
-    public function logs()
-    {
-        $logFile = storage_path('logs/job-runner-log.log');
-        $logs = [];
-
-        if (File::exists($logFile)) {
-            $content = File::get($logFile);
-
-            // Split content by date pattern
-            $pattern = '/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/';
-            $parts = preg_split($pattern, $content, -1, PREG_SPLIT_DELIM_CAPTURE);
-
-            // Process the split parts
-            for ($i = 1; $i < count($parts); $i += 2) {
-                $date = $parts[$i];
-                $message = trim($parts[$i + 1]);
-
-                switch ($message) {
-                    case str_contains($message, '[Error]'):
-                        $logs[] = [
-                            'date' => $date,
-                            'type' => 'error',
-                            'message' => trim(str_replace('[Error]', '', $message)),
-                        ];
-                        break;
-                    case str_contains($message, '[Success]'):
-                        $logs[] = [
-                            'date' => $date,
-                            'type' => 'success',
-                            'message' => trim(str_replace('[Success]', '', $message)),
-                        ];
-                        break;
-                    default:
-                        $logs[] = [
-                            'date' => $date,
-                            'type' => 'info',
-                            'message' => $message
-                        ];
-                        break;
-                }
-            }
-
-            // Reverse to show newest first
-            $logs = array_reverse($logs);
-        }
-
-        return $logs;
     }
 
     public function runJob(Request $request)
@@ -95,8 +58,8 @@ class LogController extends Controller
 
         $params_array = !empty($params) ? array_map('trim', explode(',', $params)) : [];
 
-        runBackgroundJob($className, $methodName, $params_array);
+        $result = runBackgroundJob($className, $methodName, $params_array);
 
-        return redirect()->route('logs.index')->with('success', 'Job queued successfully');
+        return response()->json(['success' => $result]);
     }
 }

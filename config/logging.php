@@ -84,7 +84,7 @@ return [
 
         'job-runner' => [
             'driver' => 'single',
-            'path' => storage_path('logs/job-runner-log.log'),
+            'path' => storage_path('logs/background_jobs.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,

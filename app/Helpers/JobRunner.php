@@ -14,18 +14,19 @@ if (!function_exists('runBackgroundJob')) {
     function runBackgroundJob(string $class, string $method, array $params = []): bool
     {
         try {
+            $command = sprintf("php run-job.php %s %s %s", $class, $method, implode(',', $params));
             // Get the class name without the namespace
             $classPath = "App\\Libs\\" . class_basename($class);
 
             // Validate class exists
             if (!class_exists($classPath)) {
-                Log::channel('joblog')->error("[Error] Class {$class} not found");
+                Log::channel('joblog')->error(sprintf("[Error] Class %s not found", $class));
                 return false;
             }
 
             // Validate method exists
             if (!method_exists($classPath, $method)) {
-                Log::channel('joblog')->error("[Error] Method {$method} not found in class {$class}");
+                Log::channel('joblog')->error(sprintf("[Error] Method %s not found in class %s", $method, $class));
                 return false;
             }
 
@@ -35,13 +36,21 @@ if (!function_exists('runBackgroundJob')) {
             // Call the method with parameters
             $result = call_user_func_array([$instance, $method], $params);
 
-            // Log successful execution
-            Log::channel('joblog')->info("[Success] {$class}::{$method} [Params] " . json_encode($params) . " [Result] " . json_encode($result));
+            if ($result) {
+                Log::channel('joblog')->info(sprintf("[Success] %s::%s [Params] %s [Command] %s", $class, $method, implode(',', $params), $command));
+            } else {
+                Log::channel('joblog')->error(sprintf("[Error] %s::%s [Params] %s [Command] %s", $class, $method, implode(',', $params), $command));
+            }
+
             return true;
 
         } catch (\Throwable $e) {
-            Log::channel('joblog')->error("[Error] Error in runBackgroundJob: " . $e->getMessage());
-            Log::channel('joblog')->error("[Error] Stack trace: " . $e->getTraceAsString());
+            Log::channel('joblog')->error(sprintf(
+                "[Error] Error in runBackgroundJob: %s\n[Command] %s\n[Stack trace] %s",
+                $e->getMessage(),
+                $command,
+                $e->getTraceAsString()
+            ));
             return false;
         }
     }
