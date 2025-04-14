@@ -2,16 +2,15 @@
 
 namespace App\Logging;
 
-use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
 use Monolog\Formatter\LineFormatter;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 
 class JobLogger
 {
     /**
      * Create a custom Monolog instance.
      *
-     * @param  array  $config
      * @return \Monolog\Logger
      */
     public function __invoke(array $config)
