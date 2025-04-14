@@ -28,22 +28,4 @@ class NumberTest
 
         return true;
     }
-
-    public function isFibonacci(int $number): bool
-    {
-        if ($number < 0) {
-            return false;
-        }
-
-        $a = 0;
-        $b = 1;
-
-        while ($b < $number) {
-            $temp = $b;
-            $b = $a + $b;
-            $a = $temp;
-        }
-
-        return $b === $number;
-    }
 }

@@ -4,18 +4,21 @@ A Laravel-based application for running and monitoring background jobs with a us
 
 ## Features
 
-- Run PHP class methods as background jobs
-- Real-time job execution monitoring
+- Run PHP class methods as background jobs through terminal
+- Real-time job execution monitoring with auto-refresh
 - Detailed logging of job execution
 - Web interface for viewing logs and running jobs
-- Error handling and stack trace logging
-- Job execution history with timestamps
+- Run Commands, Run Again and Clear Logs functionality
+- Automatic retry mechanism for failed jobs
+- Queue-based job execution
+- Real-time log updates (5-second refresh interval)
 
 ## Prerequisites
 
-- PHP 8.4
+- PHP 8.2 or higher
 - Composer
 - Laravel 12
+- Node.js and NPM (for asset compilation)
 
 ## Installation
 
@@ -41,22 +44,52 @@ php artisan key:generate
 ```
 
 5. Configure your database in `.env`:
+```bash
+php artisan migrate --seed
+```
+
+6. Configure queue settings in `.env`:
+```bash
+QUEUE_CONNECTION=database
+```
+
+7. Create the jobs table:
+```bash
+php artisan queue:table
+php artisan migrate
+```
+
+8. Start the queue worker:
+```bash
+php artisan queue:work
+```
+
+Default login credentials:
+```bash
+Username: test@example.com
+Password: password
+```
 
 ## Project Structure
 
-- `app/Helpers/JobRunner.php` - Core job execution functionality
-- `app/Http/Controllers/LogController.php` - Handles log viewing and job execution
+- `app/Helpers/JobRunner.php` - Core job execution functionality with retry mechanism
+- `app/Http/Controllers/LogController.php` - Handles log viewing, job execution, and log clearing
+- `app/Jobs/ExecuteJob.php` - Queue job handler
 - `resources/views/logs/index.blade.php` - Web interface for logs
+- `resources/views/components/log-entry.blade.php` - Reusable log entry component
 - `storage/logs/job-runner-log.log` - Job execution logs
 
 ## Usage
 
 ### Running Jobs
 
-1. Access the web interface at `http://your-domain/logs`
-2. View job execution logs
-3. Click "Run Job" on any previous job to re-execute it
-4. Monitor job execution status and results
+1. Access the web interface at `http://localhost:8000`
+2. Login
+3. View job execution logs
+4. Click "Run Again" on any previous job to re-execute it
+5. Use the "Run Command" button to execute new jobs
+6. Monitor job execution status and results in real-time
+7. Clear logs using the "Clear Logs" button
 
 ### Creating New Jobs
 
@@ -71,44 +104,37 @@ class YourJob
     public function yourMethod($param1, $param2)
     {
         // Your job logic here
-        return true;
+        return true; // Return true for success, false for failure
     }
 }
 ```
 
 2. The job will be automatically available in the web interface
 
-### Manual Testing
+### Job Retry Configuration
 
-1. Start the development server:
-```bash
-php artisan serve
+Jobs can be configured with retry settings:
+```php
+runBackgroundJob('YourJob', 'yourMethod', ['param1', 'param2'], $maxRetries = 3, $retryDelay = 5);
 ```
 
-2. Access the web interface at `http://localhost:8000/logs`
+- `$maxRetries`: Maximum number of retry attempts (default: 3)
+- `$retryDelay`: Delay between retries in seconds (default: 5)
 
-3. Test job execution:
-   - Click "Run Job" on any existing log entry
-   - Verify the job executes and new log entry appears
-   - Check for proper error handling if job fails
-
-4. Test log viewing:
-   - Verify logs are displayed correctly
-   - Check that long messages are truncated with hover tooltip
-   - Verify date formatting and log types (success/error)
+### Manual CLI Testing
+```bash
+php run-job.php NumberTest isEven {even number}
+php run-job.php NumberTest isOdd {odd number}
+php run-job.php NumberTest isPrime {prime number}
+php run-job.php StringTest testString {string} // String: %s
+php run-job.php StringTest testString {string,string,string} // String 1: %s String 2: %s String 3: %s
+```
 
 ## Log Format
 
-Logs are stored in `storage/logs/job-runner-log.log` with the following format:
+Logs are stored in `storage/logs/background_jobs.log.` with the following format:
 
 ```
-[YYYY-MM-DD HH:MM:SS] [Success/Error] ClassName::methodName [Params] param1,param2 [Command] php run-job.php ClassName methodName param1 param2
+[Y-m-d H:i:s] {"type":"success/error","message":"foo","class":"App\\Libs\\ClassName","method":"methodName","params":["param"]}
 ```
-
-## Troubleshooting
-
-1. If jobs fail to execute:
-   - Check PHP permissions
-   - Verify class and method names are correct
-   - Check log file permissions
 

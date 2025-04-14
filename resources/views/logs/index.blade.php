@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Job Logs') }}
+            {{ __('Dashboard') }}
         </h2>
     </x-slot>
 
@@ -12,40 +12,25 @@
                     <div class="mb-4">
                         <h3 class="text-lg font-medium">Recent Job Logs</h3>
                     </div>
+                    <div class="mb-4 flex justify-end gap-2">
+                        <button
+                            id="clear-logs"
+                            class="bg-red-500 text-white px-4 py-2 rounded-md"
+                            onclick="clearLogs()"
+                        >
+                            Clear Logs
+                        </button>
+                        <button
+                            id="run-command"
+                            class="bg-blue-500 text-white px-4 py-2 rounded-md log-run-options"
+                            data-command="php run-job.php Class::Method 'param1,param2,param3'"
+                        >
+                            Run Command
+                        </button>
+                    </div>
 
-                    <div class="space-y-4">
-                        @forelse($logs as $log)
-                            <div class="p-4 bg-gray-50 rounded-lg">
-                                <div class="flex items-start">
-                                    <div class="flex-1">
-                                        <div class="text-xs text-gray-500 mb-1">
-                                            [{{ $log['date'] }}]
-                                        </div>
-                                        <p class="text-sm text-gray-600">
-                                            @if($log['type'] == 'error')
-                                                <span class="text-red-500">Error:</span>
-                                                <span class="text-gray-500" title="{{ $log['message'] }}">({{ strlen($log['message']) > 200 ? substr($log['message'], 0, 200) . '...' : $log['message'] }})</span>
-                                            @elseif($log['type'] == 'success')
-                                                <span class="text-green-500">Success:</span>
-                                                <span class="text-gray-500">({{ $log['message'] }})</span>
-                                                <button
-                                                    class="bg-blue-500 text-white px-4 py-2 rounded-md float-right log-run-options"
-                                                    data-command="{{ $log['command'] }}"
-                                                >
-                                                    Run Job
-                                                </button>
-                                            @endif
+                    <div class="space-y-4" id="logs-container">
 
-
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        @empty
-                            <div class="text-center py-4">
-                                <p class="text-gray-500">No logs available</p>
-                            </div>
-                        @endforelse
                     </div>
                 </div>
             </div>
@@ -60,42 +45,78 @@
             <button
                 id="modal-run-job-close"
                 class="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+                onclick="closeModal()"
             >
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
-            <h2 class="text-lg font-medium">Run Job</h2>
+            <h2 class="text-lg font-medium">Execute Command</h2>
             <div id="modal-run-job-content">
                 <label for="job-command-input">Command</label>
                 <input type="text" id="job-command-input" class="w-full p-2 rounded-md bg-gray-100">
             </div>
-            <div class="flex justify-end">
-                <button id="modal-run-job-run" class="bg-blue-500 text-white px-4 py-2 rounded-md">Run Job</button>
+            <div class="flex justify-end mt-4">
+                <button id="modal-run-job-run" class="bg-blue-500 text-white px-4 py-2 rounded-md">Execute</button>
             </div>
         </div>
     </div>
 
     <script>
-        const options = document.querySelectorAll('.log-run-options');
-        options.forEach(option => {
-            option.addEventListener('click', () => {
-               const modal = document.getElementById('modal-run-job');
-               modal.classList.remove('hidden');
-               document.getElementById('job-command-input').value = option.dataset.command;
+        function attachEventListeners() {
+            // Remove existing event listeners first
+            document.querySelectorAll('.log-run-options').forEach(button => {
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
             });
-        });
 
-        document.getElementById('modal-run-job-close').addEventListener('click', () => {
-            const modal = document.getElementById('modal-run-job');
+            // Attach new event listeners
+            document.querySelectorAll('.log-run-options').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const modal = document.querySelector('#modal-run-job');
+                    modal.classList.remove('hidden');
+                    document.querySelector('#job-command-input').value = button.dataset.command;
+                });
+            });
+        }
+
+        function fetchLogs() {
+            const logsContainer = document.querySelector('#logs-container');
+            fetch('/logs', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/html',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                logsContainer.innerHTML = html;
+                // Reattach event listeners after loading new content
+                attachEventListeners();
+            })
+            .catch(error => {
+                console.error('Error fetching logs:', error);
+                logsContainer.innerHTML = `
+                    <div class="text-center py-4">
+                        <p class="text-red-500">Error loading logs</p>
+                    </div>
+                `;
+            });
+        }
+
+        const closeModal = () => {
+            const modal = document.querySelector('#modal-run-job');
             modal.classList.add('hidden');
-            document.getElementById('job-command-input').value = '';
-        });
+            document.querySelector('#job-command-input').value = '';
+        };
 
-        document.getElementById('modal-run-job-run').addEventListener('click', async () => {
-            const command = document.getElementById('job-command-input').value;
-            const [base, url, className, methodName, ...params] = command.split(' ');
-            console.log(className, methodName, ...params);
+        document.querySelector('#modal-run-job-run').addEventListener('click', async () => {
+            document.querySelector('#modal-run-job-run').disabled = true;
+            const command = document.querySelector('#job-command-input').value;
+
+            closeModal();
             try {
                 const response = await fetch('/api/run-job', {
                     method: 'POST',
@@ -104,15 +125,13 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
                     body: JSON.stringify({
-                        className,
-                        methodName,
-                        params: params.join(' ')
+                        command
                     })
                 });
 
                 if (response.ok) {
                     setTimeout(() => {
-                        window.location.reload();
+                        fetchLogs();
                     }, 1000);
                 } else {
                     alert('Failed to run job');
@@ -120,8 +139,27 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('Failed to run job');
+            } finally {
+                document.querySelector('#modal-run-job-run').disabled = false;
             }
         });
+
+        const clearLogs = () => {
+            if (confirm('Are you sure you want to clear the logs?')) {
+                fetch('/logs/clear', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+
+                fetchLogs();
+            }
+        }
+
+        fetchLogs();
+
+        setInterval(fetchLogs, 5000);
     </script>
 </x-app-layout>
 

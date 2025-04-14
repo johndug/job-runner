@@ -2,26 +2,15 @@
 
 namespace App\Libs;
 
-class TestClass
+class StringTest
 {
-
-    public function testString(String $s): String
+    public function testString(string $s): string
     {
-        return sprintf("String: %s", $s);
+        return sprintf('String: %s', $s);
     }
 
-    public function testMultipleStrings(String $s1, String $s2, String $s3): String
+    public function testMultipleStrings(string $s1, string $s2, string $s3): string
     {
-        return sprintf("String 1: %s, String 2: %s, String 3: %s", $s1, $s2, $s3);
-    }
-
-    public function isEven(int $number): bool
-    {
-        return $number % 2 === 0;
-    }
-
-    public function isOdd(int $number): bool
-    {
-        return $number % 2 !== 0;
+        return sprintf('String 1: %s, String 2: %s, String 3: %s', $s1, $s2, $s3);
     }
 }

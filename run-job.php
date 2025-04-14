@@ -16,6 +16,8 @@ $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 $className = $argv[1] ?? null;
 $methodName = $argv[2] ?? null;
 $params = $argv[3] ?? '';
+$maxRetries = $argv[4] ?? 1;
+$retryDelay = $argv[5] ?? 5;
 
 if (!$className || !$methodName) {
     die("Usage: php run-job.php <ClassName> <MethodName> [params]\n");
@@ -25,7 +27,7 @@ if (!$className || !$methodName) {
 $params_array = !empty($params) ? array_map('trim', explode(',', $params)) : [];
 
 // Use runBackgroundJob helper
-if (runBackgroundJob($className, $methodName, $params_array)) {
+if (runBackgroundJob($className, $methodName, $params_array, $maxRetries, $retryDelay)) {
     echo "Job {$className}::{$methodName} has been queued successfully\n";
     exit(0);
 } else {

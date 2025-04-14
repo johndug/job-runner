@@ -3,10 +3,9 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 // Include the helper file
-require_once __DIR__ . '/../../Helpers/JobRunner.php';
+require_once __DIR__.'/../../Helpers/JobRunner.php';
 
 class ExecuteJobRunner extends Command
 {
@@ -40,6 +39,7 @@ class ExecuteJobRunner extends Command
         runBackgroundJob($className, $methodName, $params_array);
 
         $this->info("Job {$className}::{$methodName} has been queued to run in background");
+
         return Command::SUCCESS;
     }
 }
